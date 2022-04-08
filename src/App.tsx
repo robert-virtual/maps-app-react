@@ -1,4 +1,4 @@
-import { LngLatLike, Map, Marker } from "mapbox-gl"; // or "const mapboxgl = require('mapbox-gl');"
+import { Map, Marker } from "mapbox-gl"; // or "const mapboxgl = require('mapbox-gl');"
 import { useContext, useEffect, useRef, useState } from "react";
 import { searchPlaces, searchPlacesRes } from "./axios/searchPlaces";
 import { SearchResult } from "./components/SearchResult";
@@ -6,19 +6,24 @@ import { ILugar } from "./contantes";
 import { MapaContext } from "./context";
 
 function App() {
-  const { mapa, setMapa, setResultsVisible, resultsVisible } =
-    useContext(MapaContext);
+  const {
+    mapa,
+    setMapa,
+    setResultsVisible,
+    resultsVisible,
+    miUbicacion,
+    setMiUbicacion,
+  } = useContext(MapaContext);
 
   const [lugares, setLugares] = useState<ILugar[]>([]);
   const [lugar, setLugar] = useState("");
   const divMapaRef = useRef<HTMLDivElement>(null);
 
   const [error, setError] = useState("");
-  const [center, setCenter] = useState<LngLatLike>([-74.5, 40]);
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setCenter([coords.longitude, coords.latitude]);
+        setMiUbicacion([coords.longitude, coords.latitude]);
       },
       () => {
         setError("No se pudo acceder a la ubicacion");
@@ -28,12 +33,12 @@ function App() {
 
   useEffect(() => {
     mapa?.flyTo({
-      center,
+      center: miUbicacion,
     });
     if (mapa) {
-      new Marker().setLngLat(center).addTo(mapa);
+      new Marker().setLngLat(miUbicacion).addTo(mapa);
     }
-  }, [center]);
+  }, [miUbicacion]);
 
   useEffect(() => {
     if (divMapaRef.current) {
@@ -41,7 +46,7 @@ function App() {
         new Map({
           container: divMapaRef.current, // container ID
           style: "mapbox://styles/mapbox/streets-v11", // style URL
-          center, // starting position [lng, lat]
+          center: miUbicacion, // starting position [lng, lat]
           zoom: 9, // starting zoom
         })
       );
@@ -49,7 +54,7 @@ function App() {
   }, [divMapaRef]);
 
   function positionInicial() {
-    mapa?.flyTo({ center });
+    mapa?.flyTo({ center: miUbicacion });
   }
   if (error) {
     <div className="grid h-screen w-screen place-items-center">
@@ -65,9 +70,15 @@ function App() {
       return;
     }
     timeOutRef.current = setTimeout(async () => {
-      const { data } = await searchPlaces.get<searchPlacesRes>(`${lugar}.json`);
-      console.log(data);
-      setLugares(data.features);
+      const { data, config } = await searchPlaces.get<searchPlacesRes>(
+        `/${lugar}.json`,
+        {
+          params: {
+            proximity: miUbicacion.join(","),
+          },
+        }
+      );
+
       setResultsVisible(data.features.length > 0);
     }, 500);
   }

@@ -1,7 +1,7 @@
 import { LngLatLike } from "mapbox-gl";
 
 export interface ILugar {
-  center: LngLatLike;
+  center: [number, number];
   place_name: string;
   text: string;
 }
