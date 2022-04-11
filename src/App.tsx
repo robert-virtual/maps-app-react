@@ -1,24 +1,29 @@
 import { LngLatLike, Map, Marker } from "mapbox-gl"; // or "const mapboxgl = require('mapbox-gl');"
 import { useContext, useEffect, useRef, useState } from "react";
-import { searchPlaces, searchPlacesRes } from "./axios/searchPlaces";
-import { SearchResult } from "./components/SearchResult";
+import { searchPlaces, searchPlacesRes } from "./axios";
+import { SearchResult } from "./components";
 import { ILugar } from "./contantes";
 import { MapaContext } from "./context";
 
 function App() {
-  const { mapa, setMapa, setResultsVisible, resultsVisible } =
-    useContext(MapaContext);
+  const {
+    mapa,
+    setMapa,
+    setResultsVisible,
+    resultsVisible,
+    miUbicacion,
+    setMiUbicacion,
+  } = useContext(MapaContext);
 
   const [lugares, setLugares] = useState<ILugar[]>([]);
   const [lugar, setLugar] = useState("");
   const divMapaRef = useRef<HTMLDivElement>(null);
 
   const [error, setError] = useState("");
-  const [center, setCenter] = useState<LngLatLike>([-74.5, 40]);
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setCenter([coords.longitude, coords.latitude]);
+        setMiUbicacion([coords.longitude, coords.latitude]);
       },
       () => {
         setError("No se pudo acceder a la ubicacion");
@@ -28,12 +33,12 @@ function App() {
 
   useEffect(() => {
     mapa?.flyTo({
-      center,
+      center: miUbicacion,
     });
     if (mapa) {
-      new Marker().setLngLat(center).addTo(mapa);
+      new Marker({ color: "#fa6b6b" }).setLngLat(miUbicacion).addTo(mapa);
     }
-  }, [center]);
+  }, [miUbicacion]);
 
   useEffect(() => {
     if (divMapaRef.current) {
@@ -41,7 +46,7 @@ function App() {
         new Map({
           container: divMapaRef.current, // container ID
           style: "mapbox://styles/mapbox/streets-v11", // style URL
-          center, // starting position [lng, lat]
+          center: miUbicacion, // starting position [lng, lat]
           zoom: 9, // starting zoom
         })
       );
@@ -49,7 +54,7 @@ function App() {
   }, [divMapaRef]);
 
   function positionInicial() {
-    mapa?.flyTo({ center });
+    mapa?.flyTo({ center: miUbicacion, zoom: 9 });
   }
   if (error) {
     <div className="grid h-screen w-screen place-items-center">
@@ -81,6 +86,7 @@ function App() {
           value={lugar}
           onChange={({ target }) => setLugar(target.value)}
           onKeyUp={buscar}
+          onFocus={() => setResultsVisible(true)}
           placeholder="buscar"
         />
         <div className="bg-white  mt-4 rounded">
@@ -99,7 +105,7 @@ function App() {
       </div>
       <button
         onClick={positionInicial}
-        className="absolute z-50 bg-purple-500 text-white p-4 rounded bottom-10 right-5 hover:scale-110 transition-all active:scale-100"
+        className="absolute z-50 bg-purple-500 text-white p-2 rounded bottom-10 right-5 hover:scale-110 transition-all active:scale-100"
       >
         Mi Ubicacion
       </button>
